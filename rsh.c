@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>           // for errno and strerror()
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -69,7 +70,6 @@ int main(void) {
         char *saveptr = NULL;
         char *token = strtok_r(line, " \t", &saveptr);
         while (token && argc < MAX_ARGS-1) {
-            // skip empty tokens
             if (*token != '\0') {
                 argv[argc++] = token;
             }
@@ -84,7 +84,6 @@ int main(void) {
         if (bf) {
             int rc = bf(argc, argv);
             if (bf == bi_exit) {
-                // exit builtin requested termination
                 free(line);
                 return rc;
             }
@@ -102,7 +101,7 @@ int main(void) {
         sigset_t dfl;
         sigemptyset(&dfl);
         sigaddset(&dfl, SIGINT);
-        posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEFAULT);
+        posix_spawnattr_setflags(&attr, POSIX_SPAWN_SETSIGDEF);          // fixed macro name
         posix_spawnattr_setsigdefault(&attr, &dfl);
 
         int rc = posix_spawnp(&pid, argv[0], NULL, &attr, argv, environ);
@@ -124,7 +123,6 @@ int main(void) {
 
 // ----- Built-in implementations -----
 
-// cd [dir]
 static int bi_cd(int argc, char *argv[]) {
     if (argc > 2) {
         printf("rsh: cd: too many arguments\n");
@@ -139,7 +137,6 @@ static int bi_cd(int argc, char *argv[]) {
     return 0;
 }
 
-// exit [status]
 static int bi_exit(int argc, char *argv[]) {
     int code = 0;
     if (argc >= 2) {
@@ -148,7 +145,6 @@ static int bi_exit(int argc, char *argv[]) {
     return code;
 }
 
-// help
 static int bi_help(int argc, char *argv[]) {
     (void)argc; (void)argv;
     printf("The allowed commands are:\n");
